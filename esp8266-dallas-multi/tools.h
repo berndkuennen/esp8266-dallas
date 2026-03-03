@@ -1,14 +1,32 @@
+
 /*
- * get temp data for given sensor and build json string
+ * get temp data all sensors and save data to central array
+ * (cronned code)
  */
-String all_sensor_data_to_json(DeviceAddress devAddr){
-  String json = "";
-  json += "{ \"c\": "  +  String(dallas_sensors.getTempC(devAddr)) ;
-  json += ", \"f\": "  +  String(dallas_sensors.getTempF(devAddr)) + " }";
-  return json;
+String get_all_sensor_data(){
+  for(int i=0; i<numberOfDevices; i++){
+    float celsius = dallas_sensors.getTempC(myDeviceData[i].devAddr);
+    myDeviceData[i].celsius    =  celsius;
+    myDeviceData[i].fahrenheit = (celsius * 9.0 / 5.0) + 32.0 ;
+  }
 }
 
+String sensor_data_to_json(DeviceAddress deviceAddress){
+  int deviceNum = NULL;
+  String json   = "";
 
+  for(uint8_t  i=0; i<numberOfDevices; i++){
+    if( deviceAddress == myDeviceData[i].devAddr) { deviceNum = i; }
+  }
+  if (deviceNum != NULL){
+    String json = "{\"c\": "   + String( myDeviceData[deviceNum].celsius )
+                +  ", \"f\": " + String( myDeviceData[deviceNum].fahrenheit )
+                +  "}";
+  } else {
+    json = "{}";
+  }
+  return json;
+}
 
 /*
  * convert byte to hex chars
@@ -56,11 +74,11 @@ void find_sensor_addresses(){
   for(int i=0;i<numberOfDevices; i++){
     // Search the wire for address
     if(dallas_sensors.getAddress(tempDeviceAddress, i)){
-      memcpy( myDeviceAddress[i].devAddr, tempDeviceAddress, sizeof(tempDeviceAddress) );
+      memcpy( myDeviceData[i].devAddr, tempDeviceAddress, sizeof(tempDeviceAddress) );
       toHexString(tempDeviceAddress);
-      memcpy( myDeviceAddress[i].hexName, hx, sizeof(myDeviceAddress[i].hexName) );
+      memcpy( myDeviceData[i].hexName, hx, sizeof(myDeviceData[i].hexName) );
       Serial.print("Found device "   + String( i ));
-      Serial.print(" with address: " + String( myDeviceAddress[i].hexName ) );
+      Serial.print(" with address: " + String( myDeviceData[i].hexName ) );
       Serial.println();
     } else {
       Serial.print("Found ghost device at " + String(i) );

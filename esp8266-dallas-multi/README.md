@@ -7,7 +7,19 @@ I needed to read temperatures in three different places but at the same
 time, and the data should be machine readable easily. So I decided to take
 an ESP8266 and wire a couple of Dallas sensors to it.
 
+### Libraries to install
+
+In order to get the code compiled, you need to install the following libaries
+in your environment:
+* DallasTemperature
+* OneWire
+* https://github.com/Pedroalbuquerque/ESPBASE
+* https://github.com/Pedroalbuquerque/PACRC32
+* https://github.com/Pedroalbuquerque/PACharTools
+* https://github.com/Pedroalbuquerque/DebugTools
+
 ### Web Interface
+
 I wanted to focus on measuring the temperatures so I decided to let some
 framework do the network and wifi stuff. In other projects I already used
 ESPbase for this and so I included it here, too. When started the first time
@@ -18,6 +30,7 @@ too, if somebody in your network likes to mess around with open devices. So
 be aware of this if you use this sketch.
 
 ### Read data
+
 * /sensor/addresses - Once setup and the sensors are wired, this page gives you a json array of
 the sensors it found. The addresses will be given in hexadecimal notation
 like "0x1234abcd". You need this later when requesting temperature from
@@ -29,6 +42,7 @@ containing the values both in °C and °F.
 * /sensor/0x1234abcd/json - shows the temperature of just the specified sensor both in °C and °F, sending the data as json object
 
 ### Configuring the ESP8266
+
 In the code there's a config section where you may adapt two settings for
 your needs:
 * maxNumDevices - defines the maximum number of sensors the ESP will be able

@@ -1,6 +1,6 @@
 /*
  * 
- * Copyright 2019 Bernd Künnen
+ * Copyright 2019.2026 Bernd Künnen
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of 
  * this software and associated documentation files (the "Software"), to deal in the 
@@ -38,7 +38,7 @@
  * See: https://forum.arduino.cc/t/arduino-2-0-rc-3-nodemcu-compile-cant-find-python3/946670/4
  *
  * --------
- * This piece of code was inspired by & thanks to thre authors of:
+ * This piece of code was inspired by & thanks to the authors of:
  *  - https://randomnerdtutorials.com/esp8266-ds18b20-temperature-sensor-web-server-with-arduino-ide/
  *  - https://lastminuteengineers.com/multiple-ds18b20-esp8266-nodemcu-tutorial/
  *  - https://lastminuteengineers.com/multiple-ds18b20-arduino-tutorial/
@@ -63,6 +63,19 @@
 // GPIO where the DS18B20 is connected to
 #define GPIO_oneWireBus 4
 
+//-- array of sensor addresses, plain and as hex string
+struct SensorData {
+  DeviceAddress devAddr;
+  char      hexName[18];
+  float         celsius;
+  float      fahrenheit;
+} ;
+SensorData myDeviceData[maxNumDevices];
+
+//-- counter for devices
+int numberOfDevices;
+int numberOfDevicesFound;
+
 
 
 //==== global objects ========
@@ -74,22 +87,15 @@ OneWire oneWireInst(GPIO_oneWireBus);
 // Pass our oneWire reference to Dallas Temperature sensor 
 DallasTemperature dallas_sensors(&oneWireInst);
 
-//-- array of sensor addresses, plain and as hex string
-struct SensorAddress {
-  DeviceAddress devAddr;
-  char      hexName[18];
-} ;
-SensorAddress myDeviceAddress[maxNumDevices];
 
-//-- counter for devices
-int numberOfDevices;
-int numberOfDevicesFound;
 
 //-- counter for cronned code
 int timer = 0;
 
 //-- global buffer for converting device addresses to hex string
 char hx[18];
+
+String data_json = "";
 
 #include "tools.h"
 #include "webhandlers.h"
@@ -111,9 +117,9 @@ void setup() {
 
   //-- individual sensor uris like /sensor/0x1234abcd/format
   for(int i=0; i<numberOfDevices; i++){
-    server.on ( "/sensor/" + String(myDeviceAddress[i].hexName) + "/c" ,    webhdl_send_sensor_data );
-    server.on ( "/sensor/" + String(myDeviceAddress[i].hexName) + "/f" ,    webhdl_send_sensor_data );
-    server.on ( "/sensor/" + String(myDeviceAddress[i].hexName) + "/json" , webhdl_send_sensor_data );
+    server.on ( "/sensor/" + String(myDeviceData[i].hexName) + "/c" ,    webhdl_send_sensor_data );
+    server.on ( "/sensor/" + String(myDeviceData[i].hexName) + "/f" ,    webhdl_send_sensor_data );
+    server.on ( "/sensor/" + String(myDeviceData[i].hexName) + "/json" , webhdl_send_sensor_data );
   }
 
   //-- init timer for cronned function
@@ -140,5 +146,8 @@ void loop() {
 //==== got some code to execute every few seconds? ====
 void cronned_code(){
   Serial.println("This would be the cronned Fnord.");
+
+  get_all_sensor_data();
+
 }
 

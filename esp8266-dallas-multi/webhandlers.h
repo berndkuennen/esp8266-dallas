@@ -1,21 +1,23 @@
 
 
+String response_type_plain = "text/plain";
+String response_type_json  = "application/json";
+
 /*
  * send temperature data of all sensors as json
  */
 void webhdl_send_sensor_all_json(){
-  dallas_sensors.requestTemperatures(); 
 
   String json = "{\n  \"sensors\":\n  {\n";
   for(int i=0;i<numberOfDevices; i++){
-    json += "    \""  +  String( myDeviceAddress[i].hexName ) + "\": ";  // add hex address as key
-    json += all_sensor_data_to_json( myDeviceAddress[i].devAddr );           // add {c:... f:...} "data line" as value
+    json += "    \""  +  String( myDeviceData[i].hexName ) + "\": ";  // add hex address as key
+    json += sensor_data_to_json(myDeviceData[i].devAddr );               // add {c:... f:...} "data line" as value
     if (i < numberOfDevices-1) json += ",";
     json += "\n";
   }
   json += "  }\n}\n";
   
-  server.send( 200, "text/plain", json);
+  server.send( 200, response_type_json, json);
   Serial.println("called webhdl_send_sensor_all_json()");
 }
 
@@ -26,12 +28,12 @@ void webhdl_send_sensor_addresses(){
   String response = "{\n  \"sensors\": [" ;
   for(int i=0;i<numberOfDevices; i++){
     response += "\"";
-    response += myDeviceAddress[i].hexName;
+    response += myDeviceData[i].hexName;
     response += "\"";
     if (i < numberOfDevices-1) response += ",";
   }
   response += "]\n}";
-  server.send( 200, "application/javascript", response);
+  server.send( 200, response_type_json, response);
   Serial.println("called webhdl_send_sensor_addresses()");
 }
 
@@ -46,48 +48,47 @@ void webhdl_send_sensor_data(){
   String uri_called = server.uri();
   Serial.print("uri called is ");   Serial.println(uri_called);
 
-  // read temperature data from sensors
-  dallas_sensors.requestTemperatures(); 
-
   // default answer
-  String response = "NULL";
+  String response_text = "NULL";
+  String response_type = response_type_plain;
 
   // check if temp is requested for any sensor in °C
   for(int i=0;i<numberOfDevices; i++){
-    if ( uri_called == "/sensor/" + String(myDeviceAddress[i].hexName) + "/c" ){
+    if ( uri_called == "/sensor/" + String(myDeviceData[i].hexName) + "/c" ){
       // match found
-      response = String(dallas_sensors.getTempC(myDeviceAddress[i].devAddr));
+      response_text = String(myDeviceData[i].celsius);
     }
   }
 
   // check if temp is requested for any sensor in °F
   for(int i=0;i<numberOfDevices; i++){
-    if ( uri_called == "/sensor/" + String(myDeviceAddress[i].hexName) + "/f" ){
+    if ( uri_called == "/sensor/" + String(myDeviceData[i].hexName) + "/f" ){
       // match found
-      response = String(dallas_sensors.getTempF(myDeviceAddress[i].devAddr));
+      response_text = String(myDeviceData[i].fahrenheit);
     }
   }
 
   // check if temp is requested for any sensor as json
   for(int i=0;i<numberOfDevices; i++){
-    if ( uri_called == "/sensor/" + String(myDeviceAddress[i].hexName) + "/json" ){
+    if ( uri_called == "/sensor/" + String(myDeviceData[i].hexName) + "/json" ){
       // match found
-      response = all_sensor_data_to_json(myDeviceAddress[i].devAddr);
+      response_text = sensor_data_to_json(myDeviceData[i].devAddr);
+      String response_type = response_type_json;
     }
   }
 
   // send response
-  server.send( 200, "text/plain", response);
+  server.send( 200, response_type, response_text);
   Serial.println("called webhdl_send_sensor_data()");
 }
 
 //-- web root
 void webhdl_root() {
-  server.send(200, "text/plain", "esp8266-dallas-multi v0.1\n");
+  server.send(200, response_type_plain, "esp8266-dallas-multi v1.0\n");
 }
 
 //-- page not found
 void webhdl_http404(){
-  server.send(404, "text/plain", "404: Not found");
+  server.send(404, response_type_plain, "404: Not found");
 }
 
