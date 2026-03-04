@@ -1,32 +1,5 @@
 
-/*
- * get temp data all sensors and save data to central array
- * (cronned code)
- */
-String get_all_sensor_data(){
-  for(int i=0; i<numberOfDevices; i++){
-    float celsius = dallas_sensors.getTempC(myDeviceData[i].devAddr);
-    myDeviceData[i].celsius    =  celsius;
-    myDeviceData[i].fahrenheit = (celsius * 9.0 / 5.0) + 32.0 ;
-  }
-}
 
-String sensor_data_to_json(DeviceAddress deviceAddress){
-  int deviceNum = NULL;
-  String json   = "";
-
-  for(uint8_t  i=0; i<numberOfDevices; i++){
-    if( deviceAddress == myDeviceData[i].devAddr) { deviceNum = i; }
-  }
-  if (deviceNum != NULL){
-    String json = "{\"c\": "   + String( myDeviceData[deviceNum].celsius )
-                +  ", \"f\": " + String( myDeviceData[deviceNum].fahrenheit )
-                +  "}";
-  } else {
-    json = "{}";
-  }
-  return json;
-}
 
 /*
  * convert byte to hex chars
@@ -52,6 +25,16 @@ void toHexString(DeviceAddress deviceAddress) {
     hx[2+i*2] = byte2hex(deviceAddress[i])[0];
     hx[3+i*2] = byte2hex(deviceAddress[i])[1];
   }
+}
+
+/*
+ * package the c/f data into a json string 
+ */
+String sensor_data_to_json(int deviceNum){
+  String json = "{\"c\": "   + String( myDeviceData[deviceNum].celsius )
+              +  ", \"f\": " + String( myDeviceData[deviceNum].fahrenheit )
+              +  "}";
+  return json;
 }
 
 /*

@@ -23,16 +23,7 @@
  *
  * !!! IMPORTANT !!!
  * 
- * (1) This sketch makes use of Pedroalbuquerque's ESPBASE which itself relies on some
- * other libraries written by him. To make the sketch compile, execute the following
- * commands to clone the following repositories into you libraries/ folder:
- * 
- *   git clone https://github.com/Pedroalbuquerque/ESPBASE.git
- *   git clone https://github.com/Pedroalbuquerque/DebugTools.git
- *   git clone https://github.com/Pedroalbuquerque/PACharTools.git
- *   git clone https://github.com/Pedroalbuquerque/PACRC32.git
- *
- * (2) If compiling with Arduino v1.8.9 (Snap) on Ubuntu Jammy 22.04 and your board
+ * (1) If compiling with Arduino v1.8.9 (Snap) on Ubuntu Jammy 22.04 and your board
  * is an ESP8266, then you have to install max. v3.0.2 of its board library due
  * to python version mismatches.
  * See: https://forum.arduino.cc/t/arduino-2-0-rc-3-nodemcu-compile-cant-find-python3/946670/4
@@ -47,15 +38,17 @@
  */
  
 #include <Arduino.h>
-#include <ESPBASE.h>
-
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <AutoConnect.h>
 
-//==== config section ===================
+//==== config section ======================================
 
-#define timer_millis 10000
+//-- read temp sensors every x milliseconds:
+#define timer_millis 300
 
 //-- define how many dallas sensors should be supported
 #define maxNumDevices   8
@@ -76,10 +69,7 @@ SensorData myDeviceData[maxNumDevices];
 int numberOfDevices;
 int numberOfDevicesFound;
 
-
-
-//==== global objects ========
-ESPBASE Esp;
+//==== global objects =========================================
 
 // Setup a oneWire instance to communicate with any OneWire devices
 OneWire oneWireInst(GPIO_oneWireBus);
@@ -87,9 +77,13 @@ OneWire oneWireInst(GPIO_oneWireBus);
 // Pass our oneWire reference to Dallas Temperature sensor 
 DallasTemperature dallas_sensors(&oneWireInst);
 
+// Standard Webserver auf Port 80
+ESP8266WebServer server;
 
+// Das AutoConnect-Objekt, das den Server "umschließt"
+AutoConnect portal(server);
 
-//-- counter for cronned code
+//-- counter for "cron code"
 int timer = 0;
 
 //-- global buffer for converting device addresses to hex string
@@ -97,6 +91,7 @@ char hx[18];
 
 String data_json = "";
 
+//-- include files with support & handler functions
 #include "tools.h"
 #include "webhandlers.h"
 
@@ -104,22 +99,41 @@ String data_json = "";
 //==== fire up your engines ... ====
 void setup() {
   Serial.begin(115200);     // init serial
-  Esp.initialize();         // init ESPbase
-  dallas_sensors.begin();   // init dallas sensors
+  Serial.println("\n********************\nMultiDallasSensorBox\n********************");
 
+  dallas_sensors.begin();   // init dallas sensors
   find_sensor_addresses();  // build internal list of sensors
 
+  Serial.println("Starte AutoConnect...");
+  AutoConnectConfig config;            // Konfiguration (Optional)
+  config.apid = "ESP8266-CFG-AP";      // Name des Access Points
+  config.psk  = "12345678";            // Passwort für den AP (optional)
+  config.title = "Mein ESP-Dashboard"; // Titel im Browser-Tab
+  portal.config(config);
+
+
   //-- setup web server ressources
-  server.on ( "/", webhdl_root );
+  server.on ( "/",           webhdl_Root );
+  server.on ( "/styles.css", webhdl_CSS );
+  server.on ( "/status",     webhdl_Status );
   server.onNotFound(webhdl_http404);
+
+  //-- sensor data
   server.on ( "/sensor/addresses", webhdl_send_sensor_addresses );
   server.on ( "/sensor/all/json",  webhdl_send_sensor_all_json  );
-
   //-- individual sensor uris like /sensor/0x1234abcd/format
   for(int i=0; i<numberOfDevices; i++){
     server.on ( "/sensor/" + String(myDeviceData[i].hexName) + "/c" ,    webhdl_send_sensor_data );
     server.on ( "/sensor/" + String(myDeviceData[i].hexName) + "/f" ,    webhdl_send_sensor_data );
     server.on ( "/sensor/" + String(myDeviceData[i].hexName) + "/json" , webhdl_send_sensor_data );
+
+  }
+
+  // Start the portal which takes care of:
+  // 1. Connection to wifi
+  // 2. If that's not possible: Start the Access Point & Captive Portal
+  if (portal.begin()) {
+    Serial.println("WiFi verbunden: " + WiFi.localIP().toString());
   }
 
   //-- init timer for cronned function
@@ -128,26 +142,26 @@ void setup() {
 
 //==== Run, Forrest, run! ====
 void loop() {
-  //-- ESPbase routines first
-  ArduinoOTA.handle();        // OTA request handling
-  server.handleClient();      // WebServer requests handling
-  customWatchdog = millis();  // feed the DOG :)
+  // IMPORTANT: Call handleClient() at beginning of loop() to keep
+  // webserver and Captive Portal running
+  portal.handleClient();
 
   //-- Add normal Sketch code here ...
 
+  // every x milliseconds, read temp sensors
   if (millis() > timer + timer_millis) 
   {
-    timer = millis();
-    cronned_code();
+    timer = millis(); // reset timer
+    
+    dallas_sensors.requestTemperatures();
+    for(int i = 0; i < numberOfDevices; i++){
+      float celsius = dallas_sensors.getTempC(myDeviceData[i].devAddr);
+      myDeviceData[i].celsius    =  celsius;
+      myDeviceData[i].fahrenheit = (celsius * 9.0 / 5.0) + 32.0 ;
+      //- debug code: Serial.println("Sensor #" + String(i) + " : " + String(myDeviceData[i].celsius));
+    }
   }
 }
 
 
-//==== got some code to execute every few seconds? ====
-void cronned_code(){
-  Serial.println("This would be the cronned Fnord.");
-
-  get_all_sensor_data();
-
-}
 
