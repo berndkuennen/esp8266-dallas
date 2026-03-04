@@ -13,16 +13,13 @@ In order to get the code compiled, you need to install the following libaries
 in your environment:
 * DallasTemperature
 * OneWire
-* https://github.com/Pedroalbuquerque/ESPBASE
-* https://github.com/Pedroalbuquerque/PACRC32
-* https://github.com/Pedroalbuquerque/PACharTools
-* https://github.com/Pedroalbuquerque/DebugTools
+* AutoConnect
 
 ### Web Interface
 
 I wanted to focus on measuring the temperatures so I decided to let some
 framework do the network and wifi stuff. In other projects I already used
-ESPbase for this and so I included it here, too. When started the first time
+AutoConnect from Hieromon for this. When started the first time
 or if the configured network isn't available, it starts a wifi access point
 for easy configuration. It's still available at root level after
 configuration which means a) it's reconfigured easily but b) broken easily,
@@ -33,13 +30,13 @@ be aware of this if you use this sketch.
 
 * /sensor/addresses - Once setup and the sensors are wired, this page gives you a json array of
 the sensors it found. The addresses will be given in hexadecimal notation
-like "0x1234abcd". You need this later when requesting temperature from
+like "0x1234ABCD". You need this later when requesting temperature from
 single sensors.
 * /sensor/all/json - shows the temperatures of all sensors as json,
 containing the values both in °C and °F.
-* /sensor/0x1234abcd/c - shows the temperature of the specified sensor in °C, sending the data as plain text
-* /sensor/0x1234abcd/f - shows the temperature of the specified sensor in °F, sending the data as plain text
-* /sensor/0x1234abcd/json - shows the temperature of just the specified sensor both in °C and °F, sending the data as json object
+* /sensor/0x1234ABCD/c - shows the temperature of the specified sensor in °C, sending the data as plain text
+* /sensor/0x1234ABCD/f - shows the temperature of the specified sensor in °F, sending the data as plain text
+* /sensor/0x1234ABCD/json - shows the temperature of just the specified sensor both in °C and °F, sending the data as json object
 
 ### Configuring the ESP8266
 
